@@ -66,6 +66,8 @@ public class Target : MonoBehaviour
                 // See how far the rabbit is to the player
                 // Use .Distance from Vector3
                 // Check if the player distance is less than the rabbits scared distance
+
+                // Professor's idle state
                 if (Vector3.Distance(transform.position, m_player.transform.position) < m_fScaredDistance) {
                     // Start rabbits hopping, transition between states
                     m_nState = eState.kHopStart;
@@ -74,57 +76,121 @@ public class Target : MonoBehaviour
 
             // state if rabbit starts hopping
             case eState.kHopStart:
-                // Determine hop direction away from the player
-                Vector3 direction = (transform.position - m_player.transform.position).normalized;
-
-                // Make the bunny face the hop direction
-                // Calculate angle towards hop direction
-                float angle = Mathf.Atan2(direction.y, direction.x) * Mathf.Rad2Deg;
-                // Adjust the angle for the bunny's orientation if needed
-                transform.rotation = Quaternion.Euler(0, 0, angle);
-
-                // Calculate a tentative end position before clamping
-                Vector3 tentativeEndPos = transform.position + direction * m_fHopSpeed;
-
-                // Convert tentative end position to viewport coordinates
-                Vector3 viewportPoint = Camera.main.WorldToViewportPoint(tentativeEndPos);
-
-                // Clamp the viewportPoint to ensure it's within the screen bounds
-                viewportPoint.x = Mathf.Clamp(viewportPoint.x, 0.05f, 0.95f); // Prevent hopping off-screen horizontally
-                viewportPoint.y = Mathf.Clamp(viewportPoint.y, 0.05f, 0.95f); // Prevent hopping off-screen vertically
-
-                // Convert the clamped viewport coordinates back to world coordinates
-                Vector3 clampedWorldPosition = Camera.main.ViewportToWorldPoint(viewportPoint);
-                clampedWorldPosition.z = transform.position.z; // Maintain the original z position
-
-                // Set the hop start position to the current position
-                m_vHopStartPos = transform.position;
-
-                // Update the end position for the hop to the clamped position
-                m_vHopEndPos = clampedWorldPosition;
-
-                // Record the start time for the hop
+                // Professor Fodor's implementation
                 m_fHopStart = Time.time;
+                bool bIsOffScreen; // bool to check if MIPS is offscreen
+                bool bIsUnSafe; // Check if MIPS is safe or not
+                int numberOfAttempts = 0; // counter for how many attempts MIPS has moved
+                Quaternion originalRotation = transform.rotation;
 
-                // Change state to hopping
-                m_nState = eState.kHop;
+                do {
+                    do {
+                        // calculate the angle the bunny will spin from
+                        float fNewAngle = Random.Range(0,360);
+
+                        // set rotation
+                        transform.rotation = Quaternion.Euler(0,0, fNewAngle);
+
+                        // set ending hop position
+                        m_vHopEndPos = transform.position + (transform.up * m_fHopTime *m_fHopSpeed);
+
+                        // Set the screen posotion so bunny doesn't go off screen
+                        var vScreenPos = Camera.main.WorldToViewportPoint(m_vHopEndPos);
+                        // fixed viewport issue 
+                        bIsOffScreen = (vScreenPos.x <= 0 || vScreenPos.x >= 1 || vScreenPos.y <= 0 | vScreenPos.y >= 1);
+
+                    } while (bIsOffScreen);
+
+
+                        bIsUnSafe = Vector3.Distance(m_vHopEndPos, m_player.transform.position) < m_fScaredDistance;
+                        numberOfAttempts += 1;
+                    } while (bIsUnSafe && (numberOfAttempts < m_nMaxMoveAttempts));
+                
+
+                // if attempts is 50
+                if (false) {
+                    transform.rotation = originalRotation;
+                    m_nState = eState.kIdle;
+                }
+                else {
+                    // switch states to hop
+                    m_vHopStartPos = transform.position;
+                    m_nState = eState.kHop;
+                }
+
                 break;
+
+
+                // OLD CODE 
+
+                // // Determine hop direction away from the player
+                // Vector3 direction = (transform.position - m_player.transform.position).normalized;
+
+                // // Make the bunny face the hop direction
+                // // Calculate angle towards hop direction
+                // float angle = Mathf.Atan2(direction.y, direction.x) * Mathf.Rad2Deg;
+                // // Adjust the angle for the bunny's orientation if needed
+                // transform.rotation = Quaternion.Euler(0, 0, angle);
+
+                // // Calculate a tentative end position before clamping
+                // Vector3 tentativeEndPos = transform.position + direction * m_fHopSpeed;
+
+                // // Convert tentative end position to viewport coordinates
+                // Vector3 viewportPoint = Camera.main.WorldToViewportPoint(tentativeEndPos);
+
+                // // Clamp the viewportPoint to ensure it's within the screen bounds
+                // viewportPoint.x = Mathf.Clamp(viewportPoint.x, 0.05f, 0.95f); // Prevent hopping off-screen horizontally
+                // viewportPoint.y = Mathf.Clamp(viewportPoint.y, 0.05f, 0.95f); // Prevent hopping off-screen vertically
+
+                // // Convert the clamped viewport coordinates back to world coordinates
+                // Vector3 clampedWorldPosition = Camera.main.ViewportToWorldPoint(viewportPoint);
+                // clampedWorldPosition.z = transform.position.z; // Maintain the original z position
+
+                // // Set the hop start position to the current position
+                // m_vHopStartPos = transform.position;
+
+                // // Update the end position for the hop to the clamped position
+                // m_vHopEndPos = clampedWorldPosition;
+
+                // // Record the start time for the hop
+                // m_fHopStart = Time.time;
+
+                // // Change state to hopping
+                // m_nState = eState.kHop;
+                // break;
 
             
             case eState.kHop:
-                // Rabbit hops, interpolate position between start and end 
-                float timeSinceStart = (Time.time - m_fHopStart) / m_fHopTime;
+                    // From professor fodor 
+                    // Calculate how far through the hop we are, as a fraction.
+                    float fHopFraction = (Time.time - m_fHopStart) / m_fHopTime;
+                    // Clamp the fraction to ensure it doesn't exceed 1.
+                    fHopFraction = Mathf.Clamp(fHopFraction, 0.0f, 1.0f);
+                    // Move the entity along the hop path.
+                    transform.position = Vector3.Lerp(m_vHopStartPos, m_vHopEndPos, fHopFraction);
 
-
-                // If < 100% of hop time passed, interpolate position of start and end 
-                if (timeSinceStart < 1.0f) {
-                    transform.position = Vector3.Lerp(m_vHopStartPos, m_vHopEndPos, timeSinceStart);
-                }
-                else {
-                    // after hop is completed, go back to idle state
-                    m_nState = eState.kIdle;
-                }
+                    // Check if the hop is complete.
+                    if (fHopFraction == 1.0f)
+                    {
+                        // If so, return to idle state.
+                        m_nState = eState.kIdle;
+                    }
                 break;
+
+                // OLD CODE
+                // // Rabbit hops, interpolate position between start and end 
+                // float timeSinceStart = (Time.time - m_fHopStart) / m_fHopTime;
+
+
+                // // If < 100% of hop time passed, interpolate position of start and end 
+                // if (timeSinceStart < 1.0f) {
+                //     transform.position = Vector3.Lerp(m_vHopStartPos, m_vHopEndPos, timeSinceStart);
+                // }
+                // else {
+                //     // after hop is completed, go back to idle state
+                //     m_nState = eState.kIdle;
+                // }
+                // break;
 
             case eState.kCaught:
                 // case is handled on OnTriggerStay2D

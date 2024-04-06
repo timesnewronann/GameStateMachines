@@ -133,6 +133,7 @@ public class Player : MonoBehaviour
                 if (m_fSpeed < m_fTargetSpeed) {
                     m_fSpeed += m_fIncSpeed;
                     m_fSpeed = Mathf.Min(m_fSpeed, m_fMaxSpeed); // Cap the speed to the maximum speed
+                    
                     //Check our speed is increasing and how much it increases
                     //Debug.Log($"Increasing Speed: New m_fSpeed = {m_fSpeed}");
                 } else if (m_fSpeed > m_fTargetSpeed) {
